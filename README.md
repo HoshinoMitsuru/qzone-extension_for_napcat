@@ -12,6 +12,9 @@ call = OneBotHTTP("http://127.0.0.1:3000", token="your-token")
 print(qzone.probe(call))                       # 通道是否可用
 page = qzone.list_feeds(call, num=5)           # 自己的说说
 post = qzone.feed_detail(call, page["items"][0]["tid"])   # 正文 + 图片 + 评论
+
+blogs = qzone.list_blogs(call, num=10)         # 日志列表（长文，非说说）
+art = qzone.blog_detail(call, blogs["items"][0]["blogId"])  # 正文纯文本 + 图 + 评论
 ```
 
 ---
@@ -74,6 +77,8 @@ auth(call)                          -> (uin, bkn, cookie)      # 凭证，只在
 check_target(policy, target, self)  -> None                    # 抛 QzoneError 表示越界
 list_feeds(call, target="", pos=0, num=20, policy=None) -> dict
 feed_detail(call, tid, target="", policy=None, max_comments=20) -> dict
+list_blogs(call, target="", pos=0, num=10, policy=None) -> dict
+blog_detail(call, blog_id, target="", policy=None, max_comments=20) -> dict
 probe(call, policy=None)            -> dict                    # 健康检查，不吐正文
 ```
 
@@ -123,6 +128,20 @@ NapCat 自带这两个动作，参数如下，可直接调：
 | 发说说 / 删说说 | 发→`tid`→列表可见→删→消失，闭环验证 |
 | 带图发说说 | `base64://` 多图正常，图片真落盘（HTTP 200 + `image/png`） |
 
+### 🔶 日志（blog，新增，未实机验证）
+
+QQ 空间的「日志」是长文内容类型，与说说（taotao）走完全不同的接口族
+（`b.qzone.qq.com/cgi-bin/blognew/*`），NapCat 本身没有任何日志能力，本库直连 cgi 补齐：
+
+| 函数 | 接口 | 说明 |
+|---|---|---|
+| `list_blogs()` | `blognew/get_abs` | 列表：`data.list[]` 含 `blogId/title/pubtime/cate/commentNum`；参数口径相反——`uin`=登录者、`hostUin`=空间主人 |
+| `blog_detail()` | `blognew/blog_output_data` + `blognew/get_comment_list` | 正文两种响应形态都处理（JSON 里 `data.html` 字符串 / 整页 HTML `#blogDetailDiv`）；评论 `topicId="<hostUin>_<blogId>"`，评论字段名是社区资料，容错解析 |
+
+**状态**：接口与参数依据多个独立开源实现（QzoneExporter 等）交叉确认，解析逻辑有离线测试
+（`tests/test_blog_offline.py` 9 项），但**尚未在真实登录态上实机验证**——NapCat 不在线时
+无法跑通凭证链。实机验证清单见 `docs/findings.md`。
+
 ### ⚠️ 接口可达但未验证字段结构
 
 - 相册列表（`fgc_list_album_v3`）、留言板（`new/get_msgb`）：`code=0`，但测试账号无数据。
@@ -152,12 +171,15 @@ NapCat 自带这两个动作，参数如下，可直接调：
 
 ```
 napcat-qzone-toolkit/
-├── qzone.py                 核心：凭证获取 + 列表 / 详情 / 健康检查
+├── qzone.py                 核心：凭证获取 + 说说列表 / 详情 + 日志列表 / 详情 + 健康检查
 ├── onebot.py                最小 OneBot 11 HTTP 调用器
 ├── examples/
-│   ├── read_feeds.py        读时间线
-│   ├── feed_detail.py       读单条 + 评论
+│   ├── read_feeds.py        读说说时间线
+│   ├── feed_detail.py       读单条说说 + 评论
+│   ├── read_blogs.py        读日志列表 / 单篇日志
 │   └── post_and_delete.py   写操作演示（默认 dry-run）
+├── tests/
+│   └── test_blog_offline.py 日志解析离线单测（无网络、无 NapCat 可跑）
 ├── docs/
 │   ├── findings.md          实测记录：能力矩阵、接口清单、失败模式
 │   └── napcat-notes.md      接入 NapCat 的几条硬经验（配置生效、进程清理、CDP 限制）
