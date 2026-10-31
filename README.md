@@ -1,8 +1,8 @@
 # napcat-qzone-toolkit
 
-通过 NapCat 已有的登录态读取 QQ 空间说说 —— 不需要 CDP、不需要 UI 自动化、不需要额外登录。
+通过 NapCat 已有的登录态读取 QQ 空间内容（**说说** 与 **日志**）—— 不需要 CDP、不需要 UI 自动化、不需要额外登录。
 
-`read / detail / comments` over NapCat's own credentials. No CDP, no UIA, no second login.
+Reads Qzone feeds (说说) **and** long-form blogs (日志) over NapCat's own credentials. No CDP, no UIA, no second login.
 
 ```python
 import qzone
@@ -201,9 +201,13 @@ napcat-qzone-toolkit/
 │   ├── read_blogs.py        读日志列表 / 单篇日志
 │   └── post_and_delete.py   写操作演示（默认 dry-run）
 ├── tests/
-│   └── test_blog_offline.py 日志解析离线单测（无网络、无 NapCat 可跑）
+│   ├── test_blog_offline.py 日志解析离线单测（9 项，无网络、无 NapCat 可跑）
+│   ├── test_blog_live.py    日志实机验证脚本（6 项清单，需 NapCat 在线）
+│   ├── blog_live_*.json     实机验证的原始响应存档（列表 / 详情 / 翻页 / 汇总）
+│   ├── cdp_probe.js          CDP 探针：抓页面请求与 JS 包、搜 cgi 名（需 node + ws）
+│   └── cdp_editor.js         CDP 探针：编辑器 DOM dump / 发布自动化与抓包
 ├── docs/
-│   ├── findings.md          实测记录：能力矩阵、接口清单、失败模式
+│   ├── findings.md          实测记录：能力矩阵、接口清单、失败模式、发布能力排除证据
 │   └── napcat-notes.md      接入 NapCat 的几条硬经验（配置生效、进程清理、CDP 限制）
 ├── LICENSE
 └── README.md
