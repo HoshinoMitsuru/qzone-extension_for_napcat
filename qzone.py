@@ -76,11 +76,13 @@ DEFAULT_POLICY: dict = {
 _FEED_FIELDS = ("tid", "content", "created_time", "cmtnum", "fwdnum", "secret",
                 "lbs", "pics", "rt_con", "uin", "name")
 
-#: Same idea for blog list entries. The upstream structure is documented by
-#: community exporters, not yet re-verified live; keep the whitelist generous
-#: and drop only the heavy nested stuff we never need.
-_BLOG_FIELDS = ("blogId", "title", "pubtime", "createTime", "cate",
-                "commentNum", "readNum", "secret", "isPub", "blogType")
+#: Same idea for blog list entries. Verified live 2026-10-31 against a real
+#: account: the publish time field is ``pubTime`` (capital T, a
+#: ``"2026-10-31 18:44"`` formatted string, **not** unix seconds), and the
+#: permission posture lives in ``ar`` / ``arUins`` / ``artype``.
+_BLOG_FIELDS = ("blogId", "title", "pubTime", "pubtime", "createTime", "cate",
+                "cateHex", "commentNum", "readNum", "secret", "isPub", "blogType",
+                "ar", "arUins", "artype")
 
 
 class QzoneError(RuntimeError):
@@ -361,14 +363,17 @@ class _BlogHTML(HTMLParser):
 
 
 def _slim_blog_comment(c: Any) -> dict | None:
-    """Tolerant mapping: the comment field names are community-documented only."""
+    """Map a blog comment to a slim dict. Field names verified live 2026-10-31:
+    ``content`` / ``postTime`` (unix seconds) / ``poster.{id,name}``. Older
+    community-documented aliases (U/uin/nick/pubtime) kept as fallbacks."""
     if not isinstance(c, dict):
         return None
+    poster = c.get("poster") if isinstance(c.get("poster"), dict) else {}
     return {
-        "name": c.get("U") or c.get("name") or c.get("nick") or c.get("nickname"),
-        "uin": c.get("uin") or c.get("ownerUin"),
+        "name": poster.get("name") or c.get("U") or c.get("name") or c.get("nick"),
+        "uin": poster.get("id") or c.get("uin") or c.get("ownerUin"),
         "content": c.get("content") or c.get("Content"),
-        "created_time": c.get("pubtime") or c.get("createTime") or c.get("time"),
+        "created_time": c.get("postTime") or c.get("pubtime") or c.get("createTime"),
     }
 
 

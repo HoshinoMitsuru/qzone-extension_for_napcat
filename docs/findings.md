@@ -18,8 +18,10 @@
 | 读单条详情 | ✅ | `code=0`，含 `content` / `conlist` / `commentlist` / `createTime` |
 | 读评论 | ✅ | 走详情接口的 `commentlist`，一次带回 |
 | 图片 URL | ✅ | 纯图说说取到 9 个 URL；带 `Referer` 的 GET 返回 200 + `image/png` |
-| 读日志列表 | 🔶 已实现未实机验证 | `blognew/get_abs`，接口口径经 QzoneExporter 等多个独立实现交叉确认 |
-| 读日志正文/评论 | 🔶 已实现未实机验证 | `blog_output_data` 双形态解析 + `get_comment_list` 容错解析；离线单测 9 项通过 |
+| 读日志列表 | ✅ | `get_abs` 实测字段齐全；时间字段是 `pubTime`（大写 T，格式化字符串） |
+| 读日志正文/评论 | ✅ | `blog_output_data` 线上走整页 HTML 形态，正文完整；评论 `data.total` + `U/uin/content/pubtime` |
+| 日志图片下载 | ✅ | 带/不带 `Referer` 均 200 + `image/jpeg`（**与说说相反**） |
+| 发表日志 | ❌ | `blog_add` 已 404；`add_blog` 恒 `-4003`，详见文末「日志发布」 |
 | 相册列表 | ⚠️ 接口可达 | `code=0`，测试账号无相册，字段结构未验证 |
 | 留言板 | ⚠️ 接口可达 | `code=0`，`commentList` 存在但为空 |
 | 好友动态聚合流 | ❌ | 恒 `hasMoreFeeds:false` + 非法 JSON（见下） |
@@ -60,7 +62,7 @@ GET https://user.qzone.qq.com/proxy/domain/taotao.qq.com/cgi-bin/emotion_cgi_msg
 
 返回含 `content` / `createTime` / `conlist` / `commentlist` / `cmtnum`。
 
-### 日志列表（blognew/get_abs，未实机验证）
+### 日志列表（blognew/get_abs，✅ 已实机验证）
 
 ```
 GET https://user.qzone.qq.com/proxy/domain/b.qzone.qq.com/cgi-bin/blognew/get_abs
@@ -76,7 +78,7 @@ cate / commentNum / readNum`。
 备用代理入口：`https://h5.qzone.qq.com/proxy/domain/b.qzone.qq.com/...`（两个都实现，
 第一个失败自动换第二个）。
 
-### 日志正文（blognew/blog_output_data，未实机验证）
+### 日志正文（blognew/blog_output_data，✅ 已实机验证）
 
 ```
 GET https://user.qzone.qq.com/proxy/domain/b.qzone.qq.com/cgi-bin/blognew/blog_output_data
@@ -91,7 +93,7 @@ GET https://user.qzone.qq.com/proxy/domain/b.qzone.qq.com/cgi-bin/blognew/blog_o
 
 注意这里 `uin` 又变回「空间主人」，与列表接口相反；`blogid` 不是 `tid`。
 
-### 日志评论（blognew/get_comment_list，未实机验证）
+### 日志评论（blognew/get_comment_list，✅ 已实机验证）
 
 ```
 GET https://user.qzone.qq.com/proxy/domain/b.qzone.qq.com/cgi-bin/blognew/get_comment_list
@@ -171,18 +173,36 @@ GET https://user.qzone.qq.com/proxy/domain/ic2.qzone.qq.com/cgi-bin/feeds/feeds3
 - 说说本身的点赞 / 评论 / 转发接口
 - 大规模翻页时的频率限制阈值
 
-## 日志（blog）实机验证清单（待 NapCat 在线后执行）
+## 日志（blog）实机验证结果（2026-10-31 完成）
 
-本轮改动停在「离线可验证」这一步，以下项目必须在真实登录态上过一遍：
+测试条件：NapCat 在线（登录号 3789****70），测试前由人工发布了《测试日志1》（纯文字）、
+《测试日志2（图片）》（含 1 张图），并各留 1 条评论。
 
-1. `list_blogs()` 实机返回：确认 `data.list[]` 字段名（`blogId/pubtime/cate/commentNum`
-   是否如社区资料所述）、`totalNum` 是否存在；空日志账号确认返回形状。
-2. `blog_detail()` 双形态实测：确认当前线上到底回 JSON 还是整页 HTML（还是两者随场景变化）；
-   若是 gb2312 乱码则按上文改编码参数。
-3. 评论字段名核对：`U/uin/content/pubtime` 或别的写法；`totalNum` 是否存在。
-4. 权限边界：仅自己可见的日志、好友可见日志在各 scope 下的实际可见性。
-5. 翻页：`pos` 递增是否稳定（对照说说列表的翻页验证方法）。
-6. 日志图片下载是否同样需要 `Referer`。
+| 项目 | 结果 | 证据 |
+|---|---|---|
+| `get_abs` 列表字段 | ✅ 实测字段：`blogId / title / pubTime / cate / cateHex / commentNum / blogType / ar / arUins / artype / block / appeal / effect1 / effect2 / inproc` | `tests/blog_live_list.json`、`tests/blog_live_round3.json` |
+| 时间字段 | ⚠️ **是 `pubTime`（大写 T）**，值为 `"2026-10-31 18:47"` 字符串，**不是** unix 秒 | 同上 |
+| `blog_output_data` 形态 | ✅ 线上走**整页 HTML**（正文在 `#blogDetailDiv`）；JSON 片段的解析分支保留兼容 | 正文「测试文本1」完整取出 |
+| 评论字段 | ✅ 实测 `U`（昵称，尾带空格）/ `uin` / `content` / `pubtime`（unix 秒） | 两篇各 1 条评论均解析正确 |
+| 评论总数键 | ⚠️ 是 `data.total`，**不是** `totalNum`（列表接口才是 `totalNum`） | 已修 `blog_detail` 读取顺序 |
+| 图片下载 | ✅ 日志图片**不需要 `Referer`**（带/不带都 200 + `image/jpeg`，JPEG magic `FF D8 FF E0`） | 与说说图片结论相反 |
+| 翻页 | ✅ `pos=1` 正常 | `tests/blog_live_list_p2.json` |
+| 权限边界 | ✅ 陌生 target 被本地策略拦截；无权限好友空间回 `code=-4403` 并抛错 | 首轮实测 |
+| 坏 `blogId` | ✅ 上游返回错误页（`errorTitle`、无 `blogDetailDiv`），库抛明确异常 | 已修，不再静默返回空对象 |
+
+## 日志发布（不具备，实证排除）
+
+1. `blognew/blog_add` → 代理 404，**已下线**。
+2. `blognew/add_blog` → 存在，但：
+   - `g_tk` 必须在 query（放 body / 缺失 → HTTP 500）；
+   - 正确 g_tk 下恒回 `code=-4003`（user / h5 两代理一致）；
+   - 补 `secverifykey = "28Q1206" + 登录Uin + "_" + 空间Uin`（从官方 `newblog/v5/script/common.js`
+     反解）后仍 `-4003`；GET 全 query 为 `-4000`；form / JSON / multipart 三种编码都试过；
+   - 直连 `b. / b1. / br. / blog.qzone.qq.com` 全部落到同一个 554 字节 404 页。
+3. 官方编辑器 `qzs.qq.com/qzone/newblog/v5/editor.html` 在无头 Chrome 中富文本组件不初始化
+   （`#blog-content-text` 为 `display:none`，编辑器 iframe 未创建，页面停「请稍侯···」），
+   因此抓不到真实提交参数。CDP 探针脚本留在 `tests/cdp_editor.js` / `tests/cdp_probe.js`，
+   人工在真浏览器里发布时可用它抓包续查。
 
 测试方法同「测试方法」节：临时开 HTTP 服务器 → `get_cookies` → 带 Cookie 直调 cgi。
 离线回归：`python tests/test_blog_offline.py`（9 项，无网络可跑）。

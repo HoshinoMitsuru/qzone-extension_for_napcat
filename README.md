@@ -128,19 +128,41 @@ NapCat 自带这两个动作，参数如下，可直接调：
 | 发说说 / 删说说 | 发→`tid`→列表可见→删→消失，闭环验证 |
 | 带图发说说 | `base64://` 多图正常，图片真落盘（HTTP 200 + `image/png`） |
 
-### 🔶 日志（blog，新增，未实机验证）
+### ✅ 日志（blog，已实机验证）
 
 QQ 空间的「日志」是长文内容类型，与说说（taotao）走完全不同的接口族
 （`b.qzone.qq.com/cgi-bin/blognew/*`），NapCat 本身没有任何日志能力，本库直连 cgi 补齐：
 
 | 函数 | 接口 | 说明 |
 |---|---|---|
-| `list_blogs()` | `blognew/get_abs` | 列表：`data.list[]` 含 `blogId/title/pubtime/cate/commentNum`；参数口径相反——`uin`=登录者、`hostUin`=空间主人 |
-| `blog_detail()` | `blognew/blog_output_data` + `blognew/get_comment_list` | 正文两种响应形态都处理（JSON 里 `data.html` 字符串 / 整页 HTML `#blogDetailDiv`）；评论 `topicId="<hostUin>_<blogId>"`，评论字段名是社区资料，容错解析 |
+| `list_blogs()` | `blognew/get_abs` | 列表：`data.list[]` 实测字段 `blogId / title / pubTime / cate / cateHex / commentNum / ar / arUins / artype`；参数口径与说说相反——`uin`=登录者、`hostUin`=空间主人 |
+| `blog_detail()` | `blognew/blog_output_data` + `blognew/get_comment_list` | 正文两种响应形态都处理（JSON 里 `data.html` 字符串 / 整页 HTML `#blogDetailDiv`）；评论 `topicId="<hostUin>_<blogId>"` |
 
-**状态**：接口与参数依据多个独立开源实现（QzoneExporter 等）交叉确认，解析逻辑有离线测试
-（`tests/test_blog_offline.py` 9 项），但**尚未在真实登录态上实机验证**——NapCat 不在线时
-无法跑通凭证链。实机验证清单见 `docs/findings.md`。
+实机验证（2026-10-31，真实账号 + 手写日志）：
+- 列表/详情/评论/翻页全部读通，正文与图片完整取出。
+- **时间字段是 `pubTime`（大写 T）**，值为 `"2026-10-31 18:47"` 格式化字符串，**不是 unix 秒**。
+- 评论字段实测为 `U`（昵称，带尾空格）/ `uin` / `content` / `pubtime`（这里是 unix 秒）；
+  总数在 `data.total`（注意不是列表接口的 `totalNum`）。
+- **日志里的图片下载不需要 `Referer`**（与说说图片不同：带与不带都 200 + `image/jpeg`）。
+- 坏 `blogId` 时上游返回错误页（含 `errorTitle`、无 `blogDetailDiv`），已识别并抛错，
+  不再静默返回空对象。
+
+### ❌ 发表日志（不具备，已实证排除）
+
+想给日志也补上写入能力，实测不可行，结论留档避免重复踩：
+
+1. `blognew/blog_add`（老 v5 编辑器用的那个）**已下线**——经代理返回 404。
+2. `blognew/add_blog` 存在但带未公开校验层：
+   - `g_tk` 必须放 **query**（放 body 或缺失一律 HTTP 500）；
+   - 放对后回业务码 **`-4003`**（user / h5 两个代理入口一致，直连 `b./b1./br./blog.qzone.qq.com` 全是 404 页）；
+   - 按官方 `common.js` 反解出写操作要求的 `secverifykey = "28Q1206" + 登录Uin + "_" + 空间Uin`，
+     补上仍 `-4003`；改 GET 全 query 得 `-4000`。参数组合、编码（form/JSON/multipart）都试过，恒拒。
+3. 官方编辑器（`qzs.qq.com/qzone/newblog/v5/editor.html`）在无头 Chrome 里富文本组件不初始化
+   （`#blog-content-text` 为 `display:none` 的隐藏字段，编辑器 iframe 从未创建，页面停在「请稍侯···」），
+   抓不到真实提交包。
+4. 旁证：主流开源实现（`qzone_api` / `Maizone` / `intchensc/qzone`）同样只支持说说，无日志发布。
+
+结论：**日志发布不实现**。需要发长文时，走人工编辑器。
 
 ### ⚠️ 接口可达但未验证字段结构
 
