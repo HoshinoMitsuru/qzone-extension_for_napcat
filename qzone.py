@@ -508,8 +508,12 @@ def blog_detail(call: Caller, blog_id: str, *, target: str = "",
         if isinstance(craw, list):
             comments = [c for c in (_slim_blog_comment(x) for x in craw[:max(1, int(max_comments))])
                         if c]
-        if isinstance(cpayload, dict) and cpayload.get("totalNum") is not None:
-            comment_count = cpayload.get("totalNum")
+        # 实测（2026-10-31）：字段名是 "total"，不是 get_abs 的 "totalNum"
+        if isinstance(cpayload, dict):
+            for key in ("total", "totalNum"):
+                if cpayload.get(key) is not None:
+                    comment_count = cpayload.get(key)
+                    break
     except QzoneError:
         pass                                  # comments are best-effort
 
