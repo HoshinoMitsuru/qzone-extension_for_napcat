@@ -477,17 +477,24 @@ def blog_detail(call: Caller, blog_id: str, *, target: str = "",
                     pass
                 text, images = sub.result()
             break
-        # Shape 2: full HTML page with the body inside blogDetailDiv.
+        # Shape 2: full HTML page. A *successful* detail page carries the body
+        # inside <div id="blogDetailDiv">; an error page (bad id, no permission,
+        # deleted post) has neither that div nor a code field — detect it by the
+        # errorTitle marker and treat as upstream failure instead of empty text.
+        if "errorTitle" in page[:2000] and "blogDetailDiv" not in page:
+            last = QzoneError("upstream returned error page (bad blogid or no access)")
+            continue
         sub = _BlogHTML(root_id="blogDetailDiv")
         try:
             sub.feed(page)
         except Exception:
             pass
         text, images = sub.result()
-        if text or images:
-            break
-    else:
-        raise last or QzoneError("all blog detail endpoints failed")
+        break
+
+    if not (text or images or fragment):
+        raise last or QzoneError(
+            "blog body is empty (bad blogid, no access, or upstream change)")
 
     comments = []
     comment_count = None
