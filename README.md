@@ -203,7 +203,8 @@ napcat-qzone-toolkit/
 ├── tests/
 │   ├── test_blog_offline.py 日志解析离线单测（9 项，无网络、无 NapCat 可跑）
 │   ├── test_blog_live.py    日志实机验证脚本（6 项清单，需 NapCat 在线）
-│   ├── blog_live_*.json     实机验证的原始响应存档（列表 / 详情 / 翻页 / 汇总）
+│   ├── blog_live_sample.json 原始响应结构样例（脱敏）
+│   ├── blog_live_*.json     本机实机响应存档（含真实账号，已 gitignore，不入库）
 │   ├── cdp_probe.js          CDP 探针：抓页面请求与 JS 包、搜 cgi 名（需 node + ws）
 │   └── cdp_editor.js         CDP 探针：编辑器 DOM dump / 发布自动化与抓包
 ├── docs/

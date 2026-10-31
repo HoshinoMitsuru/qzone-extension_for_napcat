@@ -15,3 +15,8 @@ out/
 *.log
 *.png
 !docs/*.png
+
+# Live verification raw responses: they carry a real account id, nickname,
+# private blog text and signed CDN urls, so they stay local-only.
+tests/blog_live_*.json
+!tests/blog_live_sample.json

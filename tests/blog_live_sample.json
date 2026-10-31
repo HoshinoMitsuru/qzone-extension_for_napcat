@@ -1,0 +1,44 @@
+{
+  "_comment": "脱敏样例：真实实机响应的结构说明。真实响应含账号 ID、昵称与私有内容，不入库（见 .gitignore）。",
+  "list": {
+    "uin": "<登录账号>",
+    "target": "<空间主人>",
+    "pos": 0,
+    "total": 1,
+    "items": [
+      {
+        "blogId": 1793443455,
+        "title": "<日志标题>",
+        "cate": "个人日记",
+        "cateHex": "b8f6c8cbc8d5bcc7",
+        "commentNum": 0,
+        "blogType": 0,
+        "pubTime": "2026-10-31 18:44",
+        "ar": 0,
+        "arUins": "",
+        "artype": 1,
+        "block": 0,
+        "appeal": 0,
+        "inproc": false,
+        "effect1": 65537,
+        "effect2": 524294
+      }
+    ]
+  },
+  "detail": {
+    "blog_id": "1793443455",
+    "target": "<空间主人>",
+    "text": "<正文纯文本，块级元素以换行分隔>",
+    "fragment": "",
+    "images": ["<图片 URL，需登录态时可带 Cookie 下载>"],
+    "comment_count": 1,
+    "comments": [
+      {
+        "name": "<昵称，上游带尾空格>",
+        "uin": "<评论者账号>",
+        "content": "<评论内容>",
+        "created_time": 1793443620
+      }
+    ]
+  }
+}

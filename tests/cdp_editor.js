@@ -2,6 +2,8 @@
 // dump form controls, optionally fill + submit, and capture the publish
 // XHR so we learn the real parameter set.
 //   COOKIE_FILE=... TARGET_URL=... MODE=dump|publish node tests/cdp_editor.js
+// Needs the `ws` module; set WS_MODULE to an existing copy if it is not
+// installed next to this script (e.g. the one bundled with NapCat).
 const fs = require("fs");
 const WebSocket = require(process.env.WS_MODULE || "ws");
 

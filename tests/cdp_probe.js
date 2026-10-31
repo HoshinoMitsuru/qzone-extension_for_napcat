@@ -2,6 +2,9 @@
 // network request and JS bundle URL, then grep the bundles for blog publish
 // cgi names. Usage:
 //   COOKIE="a=1; b=2" UIN=123 node tests/cdp_probe.js
+// Needs the `ws` module. If it is not installed next to this script, point
+// WS_MODULE at an existing copy, e.g. the one bundled with NapCat:
+//   WS_MODULE="/d/NapCat/node_modules/ws" COOKIE_FILE=... node tests/cdp_probe.js
 const WebSocket = require(process.env.WS_MODULE || "ws");
 
 const fs = require("fs");
